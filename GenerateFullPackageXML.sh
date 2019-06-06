@@ -28,6 +28,12 @@ StaticResource,SynonymDictionary,Territory,Territory2,Territory2Model,Territory2
 TransactionSecurityPolicy,Translations,WaveApplication,WaveDashboard,WaveDataflow,WaveDataset,WaveLens,WaveTemplateBundle,
 WaveXmd,Workflow"
 
+
+#######################################
+# Generate timestamp for debug purpouses
+# Returns:
+#   string
+#######################################
 function timeStamp(){
     echo `date "+%Y/%m/%d %T"`
 }
@@ -171,6 +177,23 @@ function generateTypeXML(){
 
 }
 
+#######################################
+# Validate if metadata type exists in restricted metadata file
+# Arguments:
+#   metadatatype
+# Returns:
+#   integer
+#######################################
+function validarRestrictedMetadata(){
+
+    local metadataType=$1
+
+    if [ -f ${restrictfilename} ]; then
+        echo $(grep -w ${metadataType} ${restrictfilename} | wc -l)
+    else
+        echo 0
+    fi
+}
 
 #######################################
 # Generate Package.xml
@@ -190,11 +213,14 @@ function generatePackageXML(){
     echo '<Package xmlns="http://soap.sforce.com/2006/04/metadata">'
     IFS=' '
     while read -r metadataType inFolder; do
-        echo "$(timeStamp) ${metadataType}" >&2
-        local typeXML="$(generateTypeXML ${apiVersion} ${metadataType} ${inFolder})"
-        
-        if [ "${typeXML}" != "" ]; then
-            echo "${typeXML}"
+        if [ "$(validarRestrictedMetadata ${metadataType} ${restrictfilename})" = 0 ]; then
+            echo "$(timeStamp) ${metadataType}" >&2
+          
+            local typeXML="$(generateTypeXML ${apiVersion} ${metadataType} ${inFolder})"
+            
+            if [ "${typeXML}" != "" ]; then
+                echo "${typeXML}"
+            fi
         fi
     done <<< "$describeMetadata"
     echo "  <version>${apiVersion}</version>"
@@ -215,6 +241,8 @@ main() {
     local apiVersion=${1:-'45.0'}
     local outputFile=${2:-'package.xml'}
     local aliasOrg=${3:-'aliasOrg'}
+    local restrictfilename=${4:-'restrictfilename.txt'}
+
     generatePackageXML ${apiVersion} > ${outputFile}
 }
  
