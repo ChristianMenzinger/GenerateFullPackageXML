@@ -1,4 +1,3 @@
-
 #!/bin/sh
 #
 # Generate a full package xml using the Salesforce CLI
